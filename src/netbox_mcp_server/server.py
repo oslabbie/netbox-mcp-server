@@ -604,6 +604,45 @@ def netbox_update_object(
     return netbox.update(endpoint, object_id, data)
 
 
+@mcp.tool(
+    description="""
+    Delete an object from NetBox.
+
+    Args:
+        object_type: String representing the NetBox object type (e.g. "dcim.device", "ipam.ipaddress")
+        object_id: The numeric ID of the object to delete
+
+    Returns:
+        True if deletion was successful, False otherwise.
+
+    Valid object_type values:
+
+    """ +
+    "\n".join(f"- {t}" for t in sorted(NETBOX_OBJECT_TYPES.keys())) +
+    """
+
+    Note: Deletion is permanent and cannot be undone. Ensure the object is not referenced by other objects before deleting.
+    """
+)
+def netbox_delete_object(
+    object_type: str,
+    object_id: int,
+):
+    """
+    Delete an object from NetBox.
+    """
+    # Validate object_type exists in mapping
+    if object_type not in NETBOX_OBJECT_TYPES:
+        valid_types = "\n".join(f"- {t}" for t in sorted(NETBOX_OBJECT_TYPES.keys()))
+        raise ValueError(f"Invalid object_type. Must be one of:\n{valid_types}")
+
+    # Get API endpoint from mapping
+    endpoint = _endpoint_for_type(object_type)
+
+    # Make API call to delete the object
+    return netbox.delete(endpoint, object_id)
+
+
 def _endpoint_for_type(object_type: str) -> str:
     """
     Returns partial API endpoint prefix for the given object type.
