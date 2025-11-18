@@ -502,6 +502,108 @@ def netbox_search_objects(
 
     return results
 
+
+@mcp.tool(
+    description="""
+    Create a new object in NetBox.
+
+    Args:
+        object_type: String representing the NetBox object type (e.g. "dcim.device", "ipam.ipaddress")
+        data: Dictionary containing the object data to create. The required fields depend on the object type.
+              Common required fields include:
+              - name: Object name (for most object types)
+              - slug: URL-friendly identifier (for many object types)
+              - status: Status value (for objects with status fields)
+              
+              For relationships, use IDs:
+              - site_id: ID of the site (for devices, interfaces, etc.)
+              - device_id: ID of the device (for interfaces, etc.)
+              - vrf_id: ID of the VRF (for IP addresses, prefixes, etc.)
+              
+              Examples:
+              - Create a site: {"name": "NYC-DC1", "slug": "nyc-dc1", "status": "active"}
+              - Create a device: {"name": "switch-01", "device_type_id": 1, "site_id": 1, "status": "active"}
+              - Create an IP address: {"address": "192.168.1.1/24", "status": "active"}
+
+    Returns:
+        The created object as a dictionary with all fields populated by NetBox.
+
+    Valid object_type values:
+
+    """ +
+    "\n".join(f"- {t}" for t in sorted(NETBOX_OBJECT_TYPES.keys())) +
+    """
+
+    See NetBox API documentation for required and optional fields for each object type.
+    """
+)
+def netbox_create_object(
+    object_type: str,
+    data: dict[str, Any],
+):
+    """
+    Create a new object in NetBox.
+    """
+    # Validate object_type exists in mapping
+    if object_type not in NETBOX_OBJECT_TYPES:
+        valid_types = "\n".join(f"- {t}" for t in sorted(NETBOX_OBJECT_TYPES.keys()))
+        raise ValueError(f"Invalid object_type. Must be one of:\n{valid_types}")
+
+    # Get API endpoint from mapping
+    endpoint = _endpoint_for_type(object_type)
+
+    # Make API call to create the object
+    return netbox.create(endpoint, data)
+
+
+@mcp.tool(
+    description="""
+    Update an existing object in NetBox.
+
+    Args:
+        object_type: String representing the NetBox object type (e.g. "dcim.device", "ipam.ipaddress")
+        object_id: The numeric ID of the object to update
+        data: Dictionary containing the fields to update. Only include fields that should be changed.
+              This performs a PATCH operation, so only specified fields will be updated.
+              
+              Examples:
+              - Update device name: {"name": "switch-01-updated"}
+              - Update device status: {"status": "maintenance"}
+              - Update IP address description: {"description": "Primary gateway"}
+              - Update multiple fields: {"name": "new-name", "description": "Updated description", "status": "active"}
+
+    Returns:
+        The updated object as a dictionary with all fields populated by NetBox.
+
+    Valid object_type values:
+
+    """ +
+    "\n".join(f"- {t}" for t in sorted(NETBOX_OBJECT_TYPES.keys())) +
+    """
+
+    See NetBox API documentation for available fields for each object type.
+    """
+)
+def netbox_update_object(
+    object_type: str,
+    object_id: int,
+    data: dict[str, Any],
+):
+    """
+    Update an existing object in NetBox.
+    """
+    # Validate object_type exists in mapping
+    if object_type not in NETBOX_OBJECT_TYPES:
+        valid_types = "\n".join(f"- {t}" for t in sorted(NETBOX_OBJECT_TYPES.keys()))
+        raise ValueError(f"Invalid object_type. Must be one of:\n{valid_types}")
+
+    # Get API endpoint from mapping
+    endpoint = _endpoint_for_type(object_type)
+
+    # Make API call to update the object
+    return netbox.update(endpoint, object_id, data)
+
+
 def _endpoint_for_type(object_type: str) -> str:
     """
     Returns partial API endpoint prefix for the given object type.
