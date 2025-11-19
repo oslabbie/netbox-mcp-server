@@ -506,24 +506,38 @@ def netbox_search_objects(
 @mcp.tool(
     description="""
     Create a new object in NetBox.
+    
+    CRITICAL FIELD NAMING RULE: 
+    - For FILTERS (netbox_get_objects): Use "_id" suffix (e.g., site_id, device_id)
+    - For CREATE/UPDATE (this tool): Use base field name WITHOUT "_id" (e.g., site, device)
+    
+    For create operations, relationship fields use base names with integer ID values:
+    CORRECT: {"device_type": 4, "role": 6, "site": 1, "rack": 2, "location": 7}
+    WRONG: {"device_type_id": 4, "role_id": 6, "site_id": 1, "rack_id": 2}
 
     Args:
         object_type: String representing the NetBox object type (e.g. "dcim.device", "ipam.ipaddress")
-        data: Dictionary containing the object data to create. The required fields depend on the object type.
-              Common required fields include:
-              - name: Object name (for most object types)
-              - slug: URL-friendly identifier (for many object types)
-              - status: Status value (for objects with status fields)
+        data: Dictionary containing the object data. Use base field names for relationships (no "_id" suffix).
               
-              For relationships, use IDs:
-              - site_id: ID of the site (for devices, interfaces, etc.)
-              - device_id: ID of the device (for interfaces, etc.)
-              - vrf_id: ID of the VRF (for IP addresses, prefixes, etc.)
+              Relationship fields (use base name, integer ID value):
+              - device_type: 4
+              - role: 6  
+              - site: 1
+              - rack: 2
+              - location: 7
+              - vrf: 1
+              - device: 10
+              
+              Common required fields:
+              - name: Object name
+              - slug: URL-friendly identifier (for many types)
+              - status: Status value (for objects with status)
               
               Examples:
-              - Create a site: {"name": "NYC-DC1", "slug": "nyc-dc1", "status": "active"}
-              - Create a device: {"name": "switch-01", "device_type_id": 1, "site_id": 1, "status": "active"}
-              - Create an IP address: {"address": "192.168.1.1/24", "status": "active"}
+              - Device: {"name": "switch-01", "device_type": 1, "role": 5, "site": 1, "rack": 2, "position": 10, "face": "front", "status": "active"}
+              - Patch panel: {"name": "PP01", "device_type": 4, "role": 6, "site": 1, "location": 7, "rack": 2, "position": 40, "face": "front", "status": "active", "airflow": "passive"}
+              - IP address: {"address": "192.168.1.1/24", "status": "active"}
+              - Interface: {"name": "eth0", "device": 10, "type": "1000base-t", "status": "active"}
 
     Returns:
         The created object as a dictionary with all fields populated by NetBox.
@@ -535,6 +549,9 @@ def netbox_search_objects(
     """
 
     See NetBox API documentation for required and optional fields for each object type.
+    
+    TIP: Before creating, use netbox_get_object_by_id to inspect an existing object of the same type 
+    to see the exact field names and structure used by NetBox.
     """
 )
 def netbox_create_object(
@@ -559,18 +576,35 @@ def netbox_create_object(
 @mcp.tool(
     description="""
     Update an existing object in NetBox.
+    
+    CRITICAL FIELD NAMING RULE:
+    - For FILTERS (netbox_get_objects): Use "_id" suffix (e.g., site_id, device_id)
+    - For CREATE/UPDATE (this tool): Use base field name WITHOUT "_id" (e.g., site, device)
+    
+    For update operations, relationship fields use base names with integer ID values:
+    CORRECT: {"role": 6, "site": 1, "rack": 2}
+    WRONG: {"role_id": 6, "site_id": 1, "rack_id": 2}
 
     Args:
         object_type: String representing the NetBox object type (e.g. "dcim.device", "ipam.ipaddress")
         object_id: The numeric ID of the object to update
-        data: Dictionary containing the fields to update. Only include fields that should be changed.
-              This performs a PATCH operation, so only specified fields will be updated.
+        data: Dictionary containing fields to update. Use base field names for relationships (no "_id" suffix).
+              Only include fields that should be changed (PATCH operation).
+              
+              Relationship fields (use base name, integer ID value):
+              - device_type: 4
+              - role: 6
+              - site: 1
+              - rack: 2
+              - location: 7
               
               Examples:
-              - Update device name: {"name": "switch-01-updated"}
-              - Update device status: {"status": "maintenance"}
-              - Update IP address description: {"description": "Primary gateway"}
-              - Update multiple fields: {"name": "new-name", "description": "Updated description", "status": "active"}
+              - {"name": "switch-01-updated"}
+              - {"status": "maintenance"}
+              - {"position": 20}
+              - {"role": 5}
+              - {"device_type": 4}
+              - {"name": "new-name", "description": "Updated", "status": "active"}
 
     Returns:
         The updated object as a dictionary with all fields populated by NetBox.
@@ -582,6 +616,9 @@ def netbox_create_object(
     """
 
     See NetBox API documentation for available fields for each object type.
+    
+    TIP: Before updating, use netbox_get_object_by_id to inspect the existing object 
+    to see the exact field names and current values.
     """
 )
 def netbox_update_object(

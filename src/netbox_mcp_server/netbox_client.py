@@ -238,7 +238,19 @@ class NetBoxRestClient(NetBoxClientBase):
         """
         url = self._build_url(endpoint)
         response = self.session.post(url, json=data, verify=self.verify_ssl)
-        response.raise_for_status()
+        if not response.ok:
+            error_detail = response.text
+            try:
+                error_json = response.json()
+                if 'detail' in error_json:
+                    error_detail = error_json['detail']
+                elif 'non_field_errors' in error_json:
+                    error_detail = str(error_json['non_field_errors'])
+                elif error_json:
+                    error_detail = str(error_json)
+            except:
+                pass
+            raise requests.HTTPError(f"{response.status_code} {response.reason}: {error_detail}", response=response)
         return response.json()
 
     def update(self, endpoint: str, id: int, data: dict[str, Any]) -> dict[str, Any]:
